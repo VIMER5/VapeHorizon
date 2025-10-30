@@ -11,7 +11,7 @@ class erpService {
     }
     try {
       const data = await axios.get(
-        `http://${process.env.DomenErp}/api/resource/Bin?filters=[["warehouse", "=", "${bin}"], ["actual_qty", ">", 0]]&fields=["item_code", "warehouse", "actual_qty"]`,
+        `http://${process.env.DomenErp}/api/resource/Bin?filters=[["warehouse", "=", "${bin}"], ["actual_qty", ">", 0]]&fields=["item_code", "warehouse", "actual_qty"]&limit_start=0&amp;limit=3`,
         {
           headers: {
             Authorization: `token ${process.env.PublicKey}:${process.env.SecretKey}`,
