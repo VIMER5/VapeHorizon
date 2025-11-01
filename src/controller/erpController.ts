@@ -1,35 +1,41 @@
-import { Request, Response } from "express";
+import { Request, Response, NextFunction } from "express";
 import erpService from "../service/erpService.js";
 import errorService from "../service/errorService.js";
 
 class erpController {
-  async getActual_qty(req: Request, res: Response) {
+  async gett(req: Request, res: Response, next: NextFunction) {
     try {
-      const dataUser: string = req.body.binName;
-      if (dataUser && dataUser.length > 1) {
-        const dataErp = await erpService.getactual_qty(dataUser);
-        res.status(200).json(dataErp);
-      } else {
-        throw errorService.badRequest("Нужно название склада");
-      }
+      throw errorService.badRequest("dd");
     } catch (err) {
-      err instanceof errorService
-        ? res.status(err.status).json(err.message)
-        : res.status(500).json("Мой код решил, что сегодня выходной.");
+      next(err);
     }
   }
-  async getPrice(req: Request, res: Response) {
+
+  async getProducts(req: Request, res: Response, next: NextFunction) {
     try {
-      const data = req.body;
-      if (!data || !data.priceListName || !data.itemCode) {
-        throw errorService.badRequest("передайте priceListName:string и itemCode[string]");
+      const dataUser = req.body;
+      if (
+        !dataUser ||
+        !dataUser.binName ||
+        !dataUser.priceListName ||
+        !dataUser.itemGroup ||
+        typeof dataUser.limit_start != "number" ||
+        typeof dataUser.limit_page_length != "number"
+      ) {
+        throw errorService.badRequest(
+          "Обязательные аргументы: binName:string, priceListName:string, itemGroup:string, limit_start:number, limit_page_length: number"
+        );
       }
-      const dataErp = await erpService.getPriceList(data.priceListName, data.itemCode);
+      const dataErp = await erpService.getProducts(
+        dataUser.binName,
+        dataUser.priceListName,
+        dataUser.itemGroup,
+        dataUser.limit_start,
+        dataUser.limit_page_length
+      );
       res.status(200).json(dataErp);
     } catch (err) {
-      err instanceof errorService
-        ? res.status(err.status).json(err.message)
-        : res.status(500).json("Мой код решил, что сегодня выходной.");
+      next(err);
     }
   }
 }

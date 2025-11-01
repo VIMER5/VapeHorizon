@@ -1,51 +1,105 @@
+import $erpAPI from "../axios/erpAPI.js";
 import axios from "axios";
 import errorService from "./errorService.js";
 
 class erpService {
-  async getactual_qty(bin: string) {
-    if (!process.env.SecretKey || !process.env.PublicKey) {
-      throw errorService.ServiceUnavailable("Нет ключей");
-    }
-    if (!process.env.DomenErp) {
-      throw errorService.ServiceUnavailable("Укажи домен ERP в env");
-    }
+  private async getAllItemsByGroup(nameGroup: string) {
     try {
-      const data = await axios.get(
-        `http://${process.env.DomenErp}/api/resource/Bin?filters=[["warehouse", "=", "${bin}"], ["actual_qty", ">", 0]]&fields=["item_code", "warehouse", "actual_qty", "name"]&limit_start=0&limit=100&order_by=item_code`,
-        {
-          headers: {
-            Authorization: `token ${process.env.PublicKey}:${process.env.SecretKey}`,
-          },
-        }
-      );
-      return data.data;
+      const allItems = await $erpAPI.post(`method/frappe.client.get_list`, {
+        doctype: "Item",
+        fields: ["name", "image", "brand"],
+        filters: [["item_group", "=", nameGroup]],
+        order_by: "name",
+        limit_page_length: 100000,
+      });
+      return allItems.data.message;
     } catch (err) {
-      throw err instanceof axios.AxiosError
-        ? new errorService(err.status ? err.status : 501, err.message)
-        : new errorService(500, "Мой код решил, что сегодня выходной.");
+      throw err instanceof axios.AxiosError ? new errorService(err.status ? err.status : 501, err.message) : err;
     }
   }
-  async getPriceList(priceListName: string, itemCode: string[]) {
+  private async getItemsNameWithQuantity(
+    binName: string,
+    allItemsName: [string],
+    limit_start: number = 0,
+    limit_page_length: number = 100
+  ) {
     try {
-      const filters = [
-        ["item_code", "in", itemCode],
-        ["price_list", "=", priceListName],
-        ["selling", "=", 1],
-      ];
-      const data = await axios.get(
-        `http://${process.env.DomenErp}/api/resource/Item%20Price?filters=${JSON.stringify(filters)}&fields=["item_code", "price_list", "price_list_rate", "currency"]`,
-        {
-          headers: {
-            Authorization: `token ${process.env.PublicKey}:${process.env.SecretKey}`,
-          },
-        }
-      );
-      return data.data;
+      const binResponse = await $erpAPI.post(`method/frappe.client.get_list`, {
+        doctype: "Bin",
+        fields: ["item_code", "actual_qty", "warehouse"],
+        filters: [
+          ["warehouse", "=", binName],
+          ["actual_qty", ">", 0],
+          ["item_code", "in", allItemsName],
+        ],
+        order_by: "item_code",
+        limit_start: limit_start,
+        limit_page_length: limit_page_length,
+      });
+      return binResponse.data.message;
     } catch (err) {
-      console.log(err);
-      throw err instanceof axios.AxiosError
-        ? new errorService(err.status ? err.status : 501, err.message)
-        : new errorService(500, "Мой код решил, что сегодня выходной.");
+      throw err instanceof axios.AxiosError ? new errorService(err.status ? err.status : 501, err.message) : err;
+    }
+  }
+
+  private async getPriceList(priceListName: string, ItemsName: [string]) {
+    try {
+      const PriceList = await $erpAPI.post(`method/frappe.client.get_list`, {
+        doctype: "Item Price",
+        fields: ["item_code", "price_list_rate", "currency", "selling", "price_list"],
+        filters: [
+          ["price_list", "=", priceListName],
+          ["selling", "=", 1],
+          ["item_code", "in", ItemsName],
+        ],
+        order_by: "item_code",
+        limit_page_length: 100000,
+      });
+      return PriceList.data.message;
+    } catch (err) {
+      throw err instanceof axios.AxiosError ? new errorService(err.status ? err.status : 501, err.message) : err;
+    }
+  }
+
+  async getProducts(
+    binName: string,
+    priceListName: string,
+    itemGroup: string,
+    limit_start: number,
+    limit_page_length: number
+  ) {
+    try {
+      // все товары в N группе
+      const allItems = await this.getAllItemsByGroup(itemGroup);
+      if (allItems.length === 0) return [];
+      const allItemsName = allItems.map((item: any) => item.name);
+
+      // проверяем наличие товаров по остаткам
+      const binResponse = await this.getItemsNameWithQuantity(binName, allItemsName, limit_start, limit_page_length);
+      const allItemsNameWithQuantity = binResponse.map((item: any) => item.item_code);
+
+      //Выгрузка прайс-листа.
+      const PriceList = await this.getPriceList(priceListName, allItemsNameWithQuantity);
+
+      //парсинг данных
+      const dataErp = binResponse.map(function (item: any) {
+        const tempPriceLisItem = PriceList.find((itemPriceList: any) => item.item_code == itemPriceList.item_code);
+        const tempitemInfo = allItems.find((itemInAllItems: any) => item.item_code == itemInAllItems.name);
+        return {
+          ...item,
+          PriceList: {
+            price_list_rate: tempPriceLisItem ? tempPriceLisItem.price_list_rate : null,
+            currency: tempPriceLisItem ? tempPriceLisItem.currency : null,
+          },
+          itemInfo: {
+            ...tempitemInfo,
+          },
+        };
+      });
+
+      return dataErp;
+    } catch (err) {
+      throw err instanceof axios.AxiosError ? new errorService(err.status ? err.status : 501, err.message) : err;
     }
   }
 }
