@@ -102,6 +102,32 @@ class erpService {
       throw err instanceof axios.AxiosError ? new errorService(err.status ? err.status : 501, err.message) : err;
     }
   }
+
+  async createSalesOrder() {
+    try {
+      const response = await $erpAPI.post(`method/frappe.client.insert`, {
+        doc: {
+          doctype: "Sales Order",
+
+          customer: "Клиент опт",
+          transaction_date: new Date().toISOString().split("T")[0],
+          delivery_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
+          set_warehouse: "1 - VH",
+          selling_price_list: "опт3к",
+          items: [
+            {
+              item_code: "САМОУБИЙЦА V2 DANGER - Lit Energy гранат",
+              qty: 20,
+            },
+          ],
+        },
+      });
+
+      return response.data.message;
+    } catch (err) {
+      throw err instanceof axios.AxiosError ? new errorService(err.status ? err.status : 501, err.message) : err;
+    }
+  }
 }
 
 export default new erpService();

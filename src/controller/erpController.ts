@@ -5,7 +5,8 @@ import errorService from "../service/errorService.js";
 class erpController {
   async gett(req: Request, res: Response, next: NextFunction) {
     try {
-      throw errorService.badRequest("dd");
+      const dataErp = await erpService.createSalesOrder();
+      res.status(200).json(dataErp);
     } catch (err) {
       next(err);
     }
