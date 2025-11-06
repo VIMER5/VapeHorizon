@@ -61,6 +61,18 @@ class erpService {
     }
   }
 
+  async getItemGroups() {
+    try {
+      const ItemGroup = await $erpAPI.post(`method/frappe.client.get_list`, {
+        doctype: "Item Group",
+        fields: ["item_group_name"],
+        filters: [["old_parent", "!=", ""]],
+      });
+      return ItemGroup.data.message;
+    } catch (err) {
+      throw err instanceof axios.AxiosError ? new errorService(err.status ? err.status : 501, err.message) : err;
+    }
+  }
   async getProducts(
     binName: string,
     priceListName: string,

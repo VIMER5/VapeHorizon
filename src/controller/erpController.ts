@@ -12,6 +12,15 @@ class erpController {
     }
   }
 
+  async getItemGroups(req: Request, res: Response, next: NextFunction) {
+    try {
+      const dataErp = await erpService.getItemGroups();
+      res.status(200).json(dataErp);
+    } catch (err) {
+      next(err);
+    }
+  }
+
   async getProducts(req: Request, res: Response, next: NextFunction) {
     try {
       const dataUser = req.body;
