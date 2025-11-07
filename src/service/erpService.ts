@@ -60,7 +60,12 @@ class erpService {
       throw err instanceof axios.AxiosError ? new errorService(err.status ? err.status : 501, err.message) : err;
     }
   }
-
+  async upInfoItem(binName: string, priceListName: string, ItemsName: [string]) {
+    try {
+    } catch (err) {
+      throw err instanceof axios.AxiosError ? new errorService(err.status ? err.status : 501, err.message) : err;
+    }
+  }
   async getItemGroups() {
     try {
       const ItemGroup = await $erpAPI.post(`method/frappe.client.get_list`, {

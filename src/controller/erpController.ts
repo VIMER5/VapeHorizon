@@ -48,6 +48,15 @@ class erpController {
       next(err);
     }
   }
+
+  async upInfoItem(req: Request, res: Response, next: NextFunction) {
+    try {
+      const dataUser = req.body;
+      const dataErp = await erpService.upInfoItem(dataUser.binName, dataUser.priceListName, dataUser.ItemsName);
+    } catch (err) {
+      next(err);
+    }
+  }
 }
 
 export default new erpController();
