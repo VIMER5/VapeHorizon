@@ -3,12 +3,19 @@ import router from "./router/router.js";
 import errorMiddleware from "./middleware/errorMiddleware.js";
 import bot from "./tgBot/tgBotController.js";
 import dotenv from "dotenv";
+import cors from "cors";
 dotenv.config({ path: ".env" });
 await isValidENV();
 
 const app = express();
 app.use(express.json());
 app.use(router);
+app.use(
+  cors({
+    origin: "http://localhost:5173",
+    credentials: true,
+  })
+);
 app.use(errorMiddleware);
 
 app.listen(process.env.PORT ? process.env.PORT : 3000, () => {
