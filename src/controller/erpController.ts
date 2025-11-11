@@ -49,10 +49,16 @@ class erpController {
     }
   }
 
-  async upInfoItem(req: Request, res: Response, next: NextFunction) {
+  async upInfoItems(req: Request, res: Response, next: NextFunction) {
     try {
       const dataUser = req.body;
-      const dataErp = await erpService.upInfoItem(dataUser.binName, dataUser.priceListName, dataUser.ItemsName);
+      if (!dataUser || !dataUser.binName || !dataUser.priceListName || !dataUser.ItemsNames) {
+        throw errorService.badRequest(
+          "Обязательные аргументы: binName:string, priceListName:string, ItemsNames:string[]"
+        );
+      }
+      const dataErp = await erpService.upInfoItem(dataUser.binName, dataUser.priceListName, dataUser.ItemsNames);
+      res.status(200).json(dataErp);
     } catch (err) {
       next(err);
     }

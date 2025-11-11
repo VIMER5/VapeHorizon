@@ -17,11 +17,27 @@ class erpService {
       throw err instanceof axios.AxiosError ? new errorService(err.status ? err.status : 501, err.message) : err;
     }
   }
+  private async getAllItems(ItemsName: string[]) {
+    try {
+      const allItems = await $erpAPI.post(`method/frappe.client.get_list`, {
+        doctype: "Item",
+        fields: ["name", "image", "brand"],
+        filters: [["name", "in", ItemsName]],
+        order_by: "name",
+        limit_page_length: 100000,
+      });
+      console.log(allItems.data.message);
+      return allItems.data.message;
+    } catch (err) {
+      throw err instanceof axios.AxiosError ? new errorService(err.status ? err.status : 501, err.message) : err;
+    }
+  }
   private async getItemsNameWithQuantity(
     binName: string,
     allItemsName: [string],
     limit_start: number = 0,
-    limit_page_length: number = 100
+    limit_page_length: number = 10000,
+    actual_qty: number = 0
   ) {
     try {
       const binResponse = await $erpAPI.post(`method/frappe.client.get_list`, {
@@ -29,7 +45,7 @@ class erpService {
         fields: ["item_code", "actual_qty", "warehouse"],
         filters: [
           ["warehouse", "=", binName],
-          ["actual_qty", ">", 0],
+          ["actual_qty", ">", actual_qty],
           ["item_code", "in", allItemsName],
         ],
         order_by: "item_code",
@@ -60,8 +76,27 @@ class erpService {
       throw err instanceof axios.AxiosError ? new errorService(err.status ? err.status : 501, err.message) : err;
     }
   }
-  async upInfoItem(binName: string, priceListName: string, ItemsName: [string]) {
+  async upInfoItem(binName: string, priceListName: string, ItemsNames: [string]) {
     try {
+      const binResponse = await this.getItemsNameWithQuantity(binName, ItemsNames, 0, 100000, -1);
+      const priceList = await this.getPriceList(priceListName, ItemsNames);
+      const allItems = await this.getAllItems(ItemsNames);
+
+      const dataErp = binResponse.map(function (item: any) {
+        const tempPriceLisItem = priceList.find((itemPriceList: any) => item.item_code == itemPriceList.item_code);
+        const thisItem = allItems.find((ItemName: any) => item.item_code == ItemName.name);
+        return {
+          ...item,
+          PriceList: {
+            price_list_rate: tempPriceLisItem ? tempPriceLisItem.price_list_rate : null,
+            currency: tempPriceLisItem ? tempPriceLisItem.currency : null,
+          },
+          itemInfo: {
+            ...thisItem,
+          },
+        };
+      });
+      return dataErp;
     } catch (err) {
       throw err instanceof axios.AxiosError ? new errorService(err.status ? err.status : 501, err.message) : err;
     }
