@@ -8,7 +8,7 @@ const __dirname = path.dirname(__filename);
 
 const bot = new Telegraf(process.env.KeyTgBot!);
 
-const adminId: number[] = [1234664472, 7929235654];
+const adminId: number[] = [1234664472, 7929235654, 1785831984];
 
 bot.start((ctx) => {
   try {
